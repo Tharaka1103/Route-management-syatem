@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import {connectDB} from '@/lib/mongodb';
 import Ride from '@/models/Ride';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     await connectDB();
     const { startTime, startLocation } = await request.json();
 
+    const url = new URL(request.url);
+    const rideId = url.pathname.split('/')[3]; // /api/rides/[id]/start
+
     const ride = await Ride.findByIdAndUpdate(
-      params.id,
+      rideId,
       {
         status: 'ongoing',
         startTime: new Date(startTime),

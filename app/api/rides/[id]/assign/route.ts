@@ -4,17 +4,17 @@ import Ride from '@/models/Ride';
 import Driver from '@/models/Driver';
 import Vehicle from '@/models/Vehicle';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     await connectDB();
     const { driverId, vehicleId } = await request.json();
 
+    const url = new URL(request.url);
+    const rideId = url.pathname.split('/')[3]; // /api/rides/[id]/assign
+
     // Update ride with driver and vehicle
     const ride = await Ride.findByIdAndUpdate(
-      params.id,
+      rideId,
       {
         driver: driverId,
         vehicle: vehicleId,

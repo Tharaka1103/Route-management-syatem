@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth-config'
 import dbConnect from '@/lib/mongodb'
 import Vehicle from '@/models/Vehicle'
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -13,7 +13,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const { vehicleNumber, model, make, year, capacity } = await request.json()
-    const { id: vehicleId } = await params
+    const url = new URL(request.url)
+    const vehicleId = url.pathname.split('/')[4] // /api/admin/vehicles/[id]
 
     if (!vehicleNumber || !model || !make || !year || !capacity) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -49,7 +50,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -57,7 +58,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: vehicleId } = await params
+    const url = new URL(request.url)
+    const vehicleId = url.pathname.split('/')[4] // /api/admin/vehicles/[id]
 
     await dbConnect()
 

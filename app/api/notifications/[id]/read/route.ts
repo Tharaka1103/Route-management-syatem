@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import dbConnect from '@/lib/dbConnect';
+import { authOptions } from '@/lib/auth-config';
+import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 import User from '@/models/User';
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -16,7 +13,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const notificationId = params.id;
+    const url = new URL(request.url);
+    const notificationId = url.pathname.split('/')[3]; // /api/notifications/[id]/read
 
     await dbConnect();
 

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth-config'
 import dbConnect from '@/lib/mongodb'
 import Route from '@/models/Route'
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -12,7 +12,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: routeId } = await params
+    const url = new URL(request.url)
+    const routeId = url.pathname.split('/')[4] // /api/admin/routes/[id]
 
     await dbConnect()
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -39,7 +40,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const { name, startLocation, endLocation } = await request.json()
-    const { id: routeId } = await params
+    const url = new URL(request.url)
+    const routeId = url.pathname.split('/')[4] // /api/admin/routes/[id]
 
     if (!name || !startLocation || !endLocation) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -80,7 +82,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -88,7 +90,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: routeId } = await params
+    const url = new URL(request.url)
+    const routeId = url.pathname.split('/')[4] // /api/admin/routes/[id]
 
     await dbConnect()
 

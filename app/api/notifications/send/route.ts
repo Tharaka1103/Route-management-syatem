@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       category,
       rideId: rideId || null,
       dailyRouteId: dailyRouteId || null,
-      senderId: user._id,
+      senderId: user.id,
       metadata: metadata || {},
     }));
 

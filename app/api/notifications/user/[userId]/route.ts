@@ -16,7 +16,7 @@ export async function GET(
     const { searchParams } = new URL(req.url);
 
     // Users can only access their own notifications unless they're admin
-    if (user.role !== 'admin' && user._id.toString() !== userId) {
+    if (user.role !== 'admin' && user.id !== userId) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }
@@ -92,7 +92,7 @@ export async function PATCH(
     const body = await req.json();
 
     // Users can only update their own notifications unless they're admin
-    if (user.role !== 'admin' && user._id.toString() !== userId) {
+    if (user.role !== 'admin' && user.id !== userId) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }
@@ -156,7 +156,7 @@ export async function DELETE(
     const { searchParams } = new URL(req.url);
 
     // Users can only delete their own notifications unless they're admin
-    if (user.role !== 'admin' && user._id.toString() !== userId) {
+    if (user.role !== 'admin' && user.id !== userId) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

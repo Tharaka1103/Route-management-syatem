@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth-config'
 import dbConnect from '@/lib/mongodb'
 import Driver from '@/models/Driver'
 import bcrypt from 'bcryptjs'
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -14,7 +14,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const { fullName, contact, email, nic, password, address } = await request.json()
-    const { id: driverId } = await params
+    const url = new URL(request.url)
+    const driverId = url.pathname.split('/')[4]
 
     if (!fullName || !contact || !nic) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -57,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -65,7 +66,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: driverId } = await params
+    const url = new URL(request.url)
+    const driverId = url.pathname.split('/')[4]
 
     await dbConnect()
 

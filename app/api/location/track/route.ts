@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     // Build query based on user role and parameters
     if (user.role === 'driver') {
-      query.driverId = user._id;
+      query.driverId = user.id;
     } else if (driverId) {
       query.driverId = driverId;
     }
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     const locationData = new LocationTracking({
-      driverId: user._id,
+      driverId: user.id,
       rideId: rideId || null,
       dailyRouteId: dailyRouteId || null,
       coordinates: { latitude, longitude },

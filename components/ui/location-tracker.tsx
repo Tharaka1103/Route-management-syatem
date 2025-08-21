@@ -5,7 +5,6 @@ import { MapPin, Navigation, Play, Square, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   locationTrackingService, 
@@ -202,14 +201,24 @@ export function LocationTracker({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Switch
-              checked={isTracking}
-              onCheckedChange={isTracking ? stopTracking : startTracking}
+            <Button
+              variant={isTracking ? "destructive" : "default"}
+              size="sm"
+              onClick={isTracking ? stopTracking : startTracking}
               disabled={permission !== 'granted' || isLoading}
-            />
-            <span className="text-sm font-medium">
-              {isTracking ? 'Stop Tracking' : 'Start Tracking'}
-            </span>
+            >
+              {isTracking ? (
+                <>
+                  <Square className="h-4 w-4 mr-2" />
+                  Stop Tracking
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Tracking
+                </>
+              )}
+            </Button>
           </div>
           
           <Button

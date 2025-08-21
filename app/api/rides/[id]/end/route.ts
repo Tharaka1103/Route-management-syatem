@@ -5,15 +5,15 @@ import Driver from '@/models/Driver';
 import Vehicle from '@/models/Vehicle';
 import { calculateDistance } from '@/lib/maps';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     await connectDB();
     const { endTime, endLocation } = await request.json();
 
-    const ride = await Ride.findById(params.id).populate(['driver', 'vehicle']);
+    const url = new URL(request.url);
+    const rideId = url.pathname.split('/')[3]; // /api/rides/[id]/end
+
+    const ride = await Ride.findById(rideId).populate(['driver', 'vehicle']);
     if (!ride) {
       return NextResponse.json({ error: 'Ride not found' }, { status: 404 });
     }
@@ -26,7 +26,7 @@ export async function PUT(
 
     // Update ride
     const updatedRide = await Ride.findByIdAndUpdate(
-      params.id,
+      rideId,
       {
         status: 'completed',
         endTime: new Date(endTime),

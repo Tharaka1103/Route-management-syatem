@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 
 interface LogoutButtonProps {
   variant?: 'default' | 'outline' | 'ghost'
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'default' | 'icon' | 'sm' | 'lg'
   className?: string
   showText?: boolean
 }

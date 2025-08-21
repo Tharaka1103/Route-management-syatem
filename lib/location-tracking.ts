@@ -48,8 +48,8 @@ class LocationTrackingService {
     }
 
     this.driverId = driverId;
-    this.currentRideId = rideId;
-    this.currentDailyRouteId = dailyRouteId;
+    this.currentRideId = rideId || null;
+    this.currentDailyRouteId = dailyRouteId || null;
     this.isTracking = true;
 
     const geolocationOptions: PositionOptions = {
@@ -175,8 +175,8 @@ class LocationTrackingService {
       driverId: this.driverId,
       latitude: location.latitude,
       longitude: location.longitude,
-      rideId: this.currentRideId,
-      dailyRouteId: this.currentDailyRouteId,
+      rideId: this.currentRideId || undefined,
+      dailyRouteId: this.currentDailyRouteId || undefined,
     };
 
     socketClient.updateLocation(updateData);

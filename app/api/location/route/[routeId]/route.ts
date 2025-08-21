@@ -4,15 +4,13 @@ import { checkUserRole } from '@/middleware/roleAuth';
 import mongoose from 'mongoose';
 
 // GET: Get location tracking for a specific route
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ routeId: string }> }
-) {
+export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     
     const { user } = await checkUserRole(['admin', 'driver', 'project_manager', 'department_head', 'employee']);
-    const { routeId } = await params;
+    const url = new URL(req.url);
+    const routeId = url.pathname.split('/')[4]; // /api/location/route/[routeId]
     const { searchParams } = new URL(req.url);
     
     const startDate = searchParams.get('startDate');
@@ -35,7 +33,7 @@ export async function GET(
 
     // If user is a driver, only show their own locations
     if (user.role === 'driver') {
-      query.driverId = user._id;
+      query.driverId = user.id;
     }
 
     const LocationTracking = mongoose.models.LocationTracking;

@@ -63,7 +63,7 @@ export async function PATCH(
     }
 
     // Check permissions
-    if (user.role === 'driver' && ride.driverId?.toString() !== user._id.toString()) {
+    if (user.role === 'driver' && ride.driverId?.toString() !== user.id) {
       return NextResponse.json(
         { success: false, error: 'You can only update rides assigned to you' },
         { status: 403 }
@@ -95,7 +95,7 @@ export async function PATCH(
     ride.statusHistory.push({
       status,
       timestamp: new Date(),
-      updatedBy: user._id,
+      updatedBy: user.id,
       notes,
     });
 
@@ -151,7 +151,7 @@ export async function GET(
     }
 
     // Check permissions
-    if (user.role === 'employee' && ride.userId?.toString() !== user._id.toString()) {
+    if (user.role === 'user' && ride.userId?.toString() !== user.id) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }
