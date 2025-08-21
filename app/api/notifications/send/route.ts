@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
+import { connectDB } from '@/lib/mongodb';
 import { checkUserRole } from '@/middleware/roleAuth';
 import mongoose from 'mongoose';
 
