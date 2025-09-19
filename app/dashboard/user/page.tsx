@@ -2,23 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, Plus, Clock, CheckCircle, AlertCircle, Car, TrendingUp, Calendar, Route, Loader2 } from 'lucide-react';
+import { MapPin, Plus, Clock, CheckCircle, AlertCircle, Car, TrendingUp, Calendar, Route, Loader2, Navigation, Calculator } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { toast } from 'sonner';
+import LocationSearchInput from '@/components/LocationSearchInput';
 
 interface Ride {
   _id: string;
   status: string;
   distanceKm: number;
-  startLocation: { address: string };
-  endLocation: { address: string };
+  startLocation: { address: string; lat?: number; lng?: number };
+  endLocation: { address: string; lat?: number; lng?: number };
   createdAt: string;
+}
+
+interface Location {
+  lat: number;
+  lng: number;
+  address: string;
+  display_name?: string;
 }
 
 export default function UserDashboard() {
@@ -26,14 +32,44 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newRide, setNewRide] = useState({
-    startAddress: '',
-    endAddress: '',
-  });
+  const [startLocation, setStartLocation] = useState<Location | null>(null);
+  const [endLocation, setEndLocation] = useState<Location | null>(null);
+  const [startInput, setStartInput] = useState('');
+  const [endInput, setEndInput] = useState('');
+  const [estimatedDistance, setEstimatedDistance] = useState<number | null>(null);
 
   useEffect(() => {
     fetchRides();
   }, []);
+
+  // Calculate distance when both locations are selected
+  useEffect(() => {
+    if (startLocation && endLocation) {
+      const distance = calculateDistance(
+        startLocation.lat,
+        startLocation.lng,
+        endLocation.lat,
+        endLocation.lng
+      );
+      setEstimatedDistance(distance);
+    } else {
+      setEstimatedDistance(null);
+    }
+  }, [startLocation, endLocation]);
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+
+    return Math.round(distance * 10) / 10; // Round to 1 decimal place
+  };
 
   const fetchRides = async () => {
     try {
@@ -53,34 +89,33 @@ export default function UserDashboard() {
   };
 
   const createRide = async () => {
-    if (!newRide.startAddress || !newRide.endAddress) {
-      toast.error('Please enter both pickup and destination addresses');
+    if (!startLocation || !endLocation) {
+      toast.error('Please select both pickup and destination locations');
       return;
     }
 
     setCreating(true);
     try {
-      // For demo purposes, using mock coordinates
       const response = await fetch('/api/rides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           startLocation: {
-            lat: 6.927079 + (Math.random() - 0.5) * 0.1,
-            lng: 79.861244 + (Math.random() - 0.5) * 0.1,
-            address: newRide.startAddress,
+            lat: startLocation.lat,
+            lng: startLocation.lng,
+            address: startLocation.address,
           },
           endLocation: {
-            lat: 6.927079 + (Math.random() - 0.5) * 0.2,
-            lng: 79.861244 + (Math.random() - 0.5) * 0.2,
-            address: newRide.endAddress,
+            lat: endLocation.lat,
+            lng: endLocation.lng,
+            address: endLocation.address,
           },
         }),
       });
 
       if (response.ok) {
         setIsDialogOpen(false);
-        setNewRide({ startAddress: '', endAddress: '' });
+        resetForm();
         fetchRides();
         toast.success('Ride request created successfully!');
       } else {
@@ -93,6 +128,14 @@ export default function UserDashboard() {
     } finally {
       setCreating(false);
     }
+  };
+
+  const resetForm = () => {
+    setStartLocation(null);
+    setEndLocation(null);
+    setStartInput('');
+    setEndInput('');
+    setEstimatedDistance(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -190,7 +233,12 @@ export default function UserDashboard() {
             <p className="text-gray-600">Manage your ride requests and track their status in real-time</p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              resetForm();
+            }
+          }}>
             <DialogTrigger asChild>
               <Button 
                 size="lg"
@@ -200,58 +248,106 @@ export default function UserDashboard() {
                 Request New Ride
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md animate-scale-in">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Car className="w-5 h-5 text-blue-600" />
                   Request New Ride
                 </DialogTitle>
                 <DialogDescription>
-                  Enter your pickup and destination addresses to request a ride
+                  Search and select your pickup and destination locations
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start" className="text-sm font-medium">Pickup Address</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-green-500" />
-                    <Input
-                      id="start"
-                      value={newRide.startAddress}
-                      onChange={(e) => setNewRide({ ...newRide, startAddress: e.target.value })}
-                      placeholder="Enter pickup location"
-                      className="pl-10 transition-all duration-300 focus:ring-2 focus:ring-blue-500"
-                    />
+                <LocationSearchInput
+                  label="Pickup Location"
+                  placeholder="Search for pickup location (e.g., Colombo Fort, Kandy City Center)"
+                  onLocationSelect={setStartLocation}
+                  selectedLocation={startLocation}
+                  iconColor="#10b981"
+                  value={startInput}
+                  onChange={setStartInput}
+                />
+                
+                <LocationSearchInput
+                  label="Destination"
+                  placeholder="Search for destination (e.g., Airport, Galle Face)"
+                  onLocationSelect={setEndLocation}
+                  selectedLocation={endLocation}
+                  iconColor="#ef4444"
+                  value={endInput}
+                  onChange={setEndInput}
+                />
+                
+                {/* Distance Estimation */}
+                {estimatedDistance && (
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Calculator className="w-5 h-5 text-blue-600" />
+                      <h4 className="font-medium text-blue-900">Trip Estimation</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-white rounded-lg">
+                        <p className="text-sm text-gray-600">Distance</p>
+                        <p className="text-xl font-bold text-blue-600">{estimatedDistance} km</p>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg">
+                        <p className="text-sm text-gray-600">Approval Type</p>
+                        <p className={`text-sm font-medium ${estimatedDistance > 25 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {estimatedDistance > 25 ? 'Project Manager' : 'Admin'}
+                        </p>
+                      </div>
+                    </div>
+                    {estimatedDistance > 25 && (
+                      <div className="mt-3 p-2 bg-orange-100 rounded text-center">
+                        <p className="text-xs text-orange-700">
+                          <AlertCircle className="w-3 h-3 inline mr-1" />
+                          Long distance rides require Project Manager approval
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end" className="text-sm font-medium">Destination Address</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-red-500" />
-                    <Input
-                      id="end"
-                      value={newRide.endAddress}
-                      onChange={(e) => setNewRide({ ...newRide, endAddress: e.target.value })}
-                      placeholder="Enter destination"
-                      className="pl-10 transition-all duration-300 focus:ring-2 focus:ring-blue-500"
-                    />
+                )}
+                
+                {startLocation && endLocation && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                      <Route className="w-4 h-4" />
+                      Route Summary
+                    </h4>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <p><strong>From:</strong> {startLocation.address}</p>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <p><strong>To:</strong> {endLocation.address}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+                
                 <Button 
                   onClick={createRide} 
                   className="w-full bg-blue-500 transition-all duration-300" 
-                  disabled={creating}
+                  disabled={creating || !startLocation || !endLocation}
                   size="lg"
                 >
                   {creating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating Ride...
+                      Creating Ride Request...
                     </>
                   ) : (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
                       Create Ride Request
+                      {estimatedDistance && (
+                        <span className="ml-2 text-xs opacity-75">
+                          ({estimatedDistance} km)
+                        </span>
+                      )}
                     </>
                   )}
                 </Button>
