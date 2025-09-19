@@ -1,29 +1,25 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css';
-import { Toaster } from 'sonner'
-import SessionProvider from '@/components/providers/SessionProvider';
-
-const inter = Inter({ subsets: ['latin'] })
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Route Management System - RouteBook',
-  description: 'Advanced route management and booking system for RouteBook organization',
-}
+  title: 'Ride Management System',
+  description: 'Real-time ride and route management system',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          <Toaster richColors position="bottom-right" />
-          {children}
-        </SessionProvider>
+        {children} 
+        <Toaster position='bottom-right' richColors/>
       </body>
     </html>
-  )
+  );
 }

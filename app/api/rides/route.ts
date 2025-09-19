@@ -1,69 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {connectDB} from '@/lib/mongodb';
-import Ride from '@/models/Ride';
-import User from '@/models/User';
-
-export async function POST(request: NextRequest) {
-  try {
-    await connectDB();
-    const body = await request.json();
-    
-    const { userId, startLocation, endLocation } = body;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Find department head
-    const departmentHead = await User.findOne({ 
-      department: user.department, 
-      role: 'department_head' 
-    });
-
-    const ride = new Ride({
-      user: userId,
-      startLocation,
-      endLocation,
-      departmentHead: departmentHead?._id,
-      status: 'pending',
-      approvalStatus: 'pending'
-    });
-
-    await ride.save();
-
-    return NextResponse.json({ 
-      message: 'Ride created successfully',
-      ride
-    });
-  } catch (error) {
-    console.error('Ride creation error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
+import  connectDB  from '@/lib/mongodb';
+import { RideModel } from '@/lib/models';
+import { verifyToken } from '@/lib/auth';
+import { calculateRoute } from '@/lib/maps';
 
 export async function GET(request: NextRequest) {
   try {
+    const token = request.cookies.get('token')?.value;
+    const decoded = verifyToken(token!) as any;
+    
     await connectDB();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const driverId = searchParams.get('driverId');
-    const status = searchParams.get('status');
-
-    let filter: any = {};
-    if (userId) filter.user = userId;
-    if (driverId) filter.driver = driverId;
-    if (status) filter.status = status;
-
-    const rides = await Ride.find(filter)
-      .populate('user', 'fullName email department')
-      .populate('driver', 'fullName contact')
-      .populate('vehicle', 'vehicleNumber model')
-      .sort({ createdAt: -1 });
-
+    
+    let query = {};
+    
+    if (decoded.role === 'user') {
+      query = { userId: decoded.userId };
+    } else if (decoded.role === 'driver') {
+      query = { driverId: decoded.userId };
+    } else if (decoded.role === 'project_manager') {
+      query = { status: 'awaiting_pm' };
+    }
+    // Admin can see all rides
+    
+    const rides = await RideModel.find(query).sort({ createdAt: -1 });
+    
     return NextResponse.json(rides);
   } catch (error) {
-    console.error('Get rides error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const token = request.cookies.get('token')?.value;
+    const decoded = verifyToken(token!) as any;
+    
+    if (decoded.role !== 'user') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    
+    await connectDB();
+    
+    const { startLocation, endLocation } = await request.json();
+    
+    // Calculate route distance
+    const { distanceKm } = await calculateRoute(
+      { lat: startLocation.lat, lng: startLocation.lng },
+      { lat: endLocation.lat, lng: endLocation.lng }
+    );
+    
+    const ride = new RideModel({
+      userId: decoded.userId,
+      distanceKm,
+      startLocation,
+      endLocation,
+      status: distanceKm > 25 ? 'awaiting_pm' : 'awaiting_admin',
+      approval: {}
+    });
+    
+    await ride.save();
+    
+    return NextResponse.json(ride);
+  } catch (error) {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

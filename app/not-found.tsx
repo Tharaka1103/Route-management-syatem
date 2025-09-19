@@ -10,7 +10,7 @@ export default function NotFound() {
         <div className="relative w-64 h-64 mx-auto mb-8">
           <Image
             src="/404.png"
-            alt="404 Restaurant Illustration"
+            alt="404 Solar Panel Illustration"
             fill
             className="object-contain"
             priority
@@ -22,7 +22,7 @@ export default function NotFound() {
         </h1>
         
         <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-          Oops! Looks like this dish isn't on our menu. Let's get you back to our delicious offerings.
+          Looks like the solar panel we're looking for is in the dark. Let's get you back to a brighter path.
         </p>
         
         <div className="space-y-4">
@@ -31,34 +31,34 @@ export default function NotFound() {
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:opacity-90 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Menu
+            Back to Homepage
           </Link>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center mt-8">
             <Link 
-              href="/menu"
+              href="/services"
               className="text-muted-foreground hover:text-primary transition-colors"
             >
-              View Our Menu
+              View Our Services
             </Link>
             <Link 
               href="/contact"
               className="text-muted-foreground hover:text-primary transition-colors"
             >
-              Contact Us
+              Contact Support
             </Link>
             <Link 
-              href="/reservations"
+              href="/products"
               className="text-muted-foreground hover:text-primary transition-colors"
             >
-              Make Reservation
+              Browse Products
             </Link>
           </div>
         </div>
         
         <div className="mt-12 p-6 bg-card rounded-xl border border-border">
-          <h2 className="font-semibold mb-2">Hungry? We're Here to Help!</h2>
-          <p className="text-muted-foreground mb-4">Our staff is ready to serve you</p>
+          <h2 className="font-semibold mb-2">Need Immediate Assistance?</h2>
+          <p className="text-muted-foreground mb-4">Our solar experts are here to help</p>
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
             <a 
               href="tel:+12345678900"
@@ -68,10 +68,10 @@ export default function NotFound() {
             </a>
             <span className="hidden md:inline text-muted-foreground">|</span>
             <a 
-              href="mailto:info@foodiesbyglance.com"
+              href="mailto:contact@smartsolar.com"
               className="hover:text-primary transition-colors"
             >
-              info@foodiesbyglance.com
+              contact@smartsolar.com
             </a>
           </div>
         </div>

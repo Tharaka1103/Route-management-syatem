@@ -1,61 +1,46 @@
-export const calculateDistance = async (
-  start: { latitude: number; longitude: number },
-  end: { latitude: number; longitude: number }
-): Promise<number> => {
-  return new Promise((resolve, reject) => {
-    if (typeof window !== 'undefined' && window.google) {
-      const service = new google.maps.DistanceMatrixService();
-      service.getDistanceMatrix({
-        origins: [{ lat: start.latitude, lng: start.longitude }],
-        destinations: [{ lat: end.latitude, lng: end.longitude }],
-        travelMode: google.maps.TravelMode.DRIVING,
-        unitSystem: google.maps.UnitSystem.METRIC,
-      }, (response, status) => {
-        if (status === 'OK' && response?.rows[0]?.elements[0]?.distance) {
-          const distanceInMeters = response.rows[0].elements[0].distance.value;
-          resolve(distanceInMeters / 1000); // Convert to kilometers
-        } else {
-          reject(new Error('Failed to calculate distance'));
-        }
-      });
-    } else {
-      // Fallback: Haversine formula for server-side calculation
-      const R = 6371; // Earth's radius in kilometers
-      const dLat = toRad(end.latitude - start.latitude);
-      const dLon = toRad(end.longitude - start.longitude);
-      const lat1 = toRad(start.latitude);
-      const lat2 = toRad(end.latitude);
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      const distance = R * c;
+export interface DirectionsResponse {
+  routes: Array<{
+    legs: Array<{
+      distance: { value: number; text: string };
+      duration: { value: number; text: string };
+    }>;
+    overview_polyline: { points: string };
+  }>;
+}
 
-      resolve(distance);
-    }
-  });
-};
+export async function calculateRoute(
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number }
+): Promise<{ distanceKm: number; polyline: string }> {
+  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&key=${GOOGLE_MAPS_API_KEY}`;
+  
+  const response = await fetch(url);
+  const data: DirectionsResponse = await response.json();
+  
+  if (data.routes && data.routes.length > 0) {
+    const route = data.routes[0];
+    const leg = route.legs[0];
+    const distanceKm = leg.distance.value / 1000; // Convert meters to kilometers
+    const polyline = route.overview_polyline.points;
+    
+    return { distanceKm, polyline };
+  }
+  
+  throw new Error('No route found');
+}
 
-const toRad = (value: number) => {
-  return value * Math.PI / 180;
-};
-
-export const reverseGeocode = async (
-  lat: number,
-  lng: number
-): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    if (typeof window !== 'undefined' && window.google) {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === 'OK' && results && results[0]) {
-          resolve(results[0].formatted_address);
-        } else {
-          reject(new Error('Failed to get address'));
-        }
-      });
-    } else {
-      resolve(`${lat}, ${lng}`); // Fallback to coordinates
-    }
-  });
-};
+export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
+  
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  if (data.results && data.results.length > 0) {
+    const location = data.results[0].geometry.location;
+    return { lat: location.lat, lng: location.lng };
+  }
+  
+  throw new Error('Address not found');
+}

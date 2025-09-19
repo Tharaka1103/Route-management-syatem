@@ -1,82 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
-import dbConnect from '@/lib/mongodb'
-import User from '@/models/User'
-import { Department } from '@/types'
+import { NextRequest, NextResponse } from 'next/server';
+import  connectDB  from '@/lib/mongodb';
+import { UserModel } from '@/lib/models';
+import { hashPassword, generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect()
+    await connectDB();
     
-    const { email, fullName, department, contact, address, password } = await request.json()
-
-    // Validate required fields
-    if (!email || !fullName || !department || !password) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email })
+    const { name, email, password } = await request.json();
+    
+    const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'User already exists' }, { status: 400 });
     }
-
-    // Validate department
-    const validDepartments: Department[] = ['mechanical', 'civil', 'electrical', 'HSEQ', 'HR']
-    if (!validDepartments.includes(department)) {
-      return NextResponse.json(
-        { error: 'Invalid department' },
-        { status: 400 }
-      )
-    }
-
-    // Hash password
-    const hashedPassword = bcrypt.hashSync(password, 12)
-
-    // Create new user
-    const newUser = new User({
+    
+    const passwordHash = await hashPassword(password);
+    
+    const user = new UserModel({
+      name,
       email,
-      fullName,
-      department,
-      contact: contact || undefined,
-      address: address || undefined,
-      password: hashedPassword,
+      passwordHash,
       role: 'user'
-    })
-
-    const savedUser = await newUser.save()
-
-    // Return user without password
-    const userResponse = {
-      id: savedUser._id,
-      email: savedUser.email,
-      fullName: savedUser.fullName,
-      department: savedUser.department,
-      role: savedUser.role,
-      contact: savedUser.contact,
-      address: savedUser.address,
-      createdAt: savedUser.createdAt
-    }
-
-    return NextResponse.json(
-      { 
-        message: 'User created successfully',
-        user: userResponse
-      },
-      { status: 201 }
-    )
-
+    });
+    
+    await user.save();
+    
+    const token = generateToken(user);
+    
+    const response = NextResponse.json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+    
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+    
+    return response;
   } catch (error) {
-    console.error('Registration error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

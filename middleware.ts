@@ -1,102 +1,59 @@
-import { withAuth } from "next-auth/middleware"
-import { NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export default withAuth(
-  function middleware(req) {
-    const { pathname } = req.nextUrl
-    const token = req.nextauth.token
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('token')?.value;
+  const { pathname } = request.nextUrl;
 
-    // Redirect /login to /auth/signin
-    if (pathname === '/login') {
-      return NextResponse.redirect(new URL('/auth/signin', req.url))
-    }
+  console.log('🛡️ Middleware running for:', pathname);
+  console.log('🍪 Token exists:', !!token);
 
-    // Public routes that don't require authentication
-    const publicRoutes = ['/auth/signin', '/auth/signup', '/auth/error', '/', '/api/auth']
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  // Define public API routes that don't need authentication
+  const publicApiRoutes = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/logout'
+  ];
 
-    if (isPublicRoute) {
-      return NextResponse.next()
-    }
-
-    // If no token and not on public route, redirect to signin
-    if (!token) {
-      const signInUrl = new URL('/auth/signin', req.url)
-      signInUrl.searchParams.set('callbackUrl', pathname)
-      return NextResponse.redirect(signInUrl)
-    }
-
-    // Role-based route protection
-    const role = token.role as string
-
-    // Admin routes
-    if (pathname.startsWith('/admin') && role !== 'admin') {
-      return NextResponse.redirect(new URL('/unauthorized', req.url))
-    }
-
-    // Driver routes
-    if (pathname.startsWith('/driver') && role !== 'driver') {
-      return NextResponse.redirect(new URL('/unauthorized', req.url))
-    }
-
-    // Department head routes
-    if (pathname.startsWith('/department-head') && role !== 'department_head') {
-      return NextResponse.redirect(new URL('/unauthorized', req.url))
-    }
-
-    // Project manager routes
-    if (pathname.startsWith('/project-manager') && role !== 'project_manager') {
-      return NextResponse.redirect(new URL('/unauthorized', req.url))
-    }
-
-    // User dashboard routes
-    if (pathname.startsWith('/dashboard') && !['user', 'department_head', 'project_manager'].includes(role)) {
-      return NextResponse.redirect(new URL('/unauthorized', req.url))
-    }
-
-    // Ensure drivers only access driver routes (except ride tracking)
-    if (role === 'driver' && !pathname.startsWith('/driver') && !pathname.startsWith('/ride/') && !pathname.startsWith('/api/') && pathname !== '/') {
-      return NextResponse.redirect(new URL('/driver', req.url))
-    }
-
-    // Ensure admins access appropriate routes
-    if (role === 'admin' && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/admin', req.url))
-    }
-
-    // Ensure department heads access appropriate routes
-    if (role === 'department_head' && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/department-head', req.url))
-    }
-
-    // Ensure project managers access appropriate routes
-    if (role === 'project_manager' && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/project-manager', req.url))
-    }
-
-    return NextResponse.next()
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => {
-        // This function determines if the middleware should run
-        // Return true to run middleware, false to skip
-        return true
-      }
-    }
+  // If it's a public API route, allow access
+  if (publicApiRoutes.includes(pathname)) {
+    console.log('📂 Public API route accessed:', pathname);
+    return NextResponse.next();
   }
-)
+
+  // Handle home and login pages
+  if (pathname === '/login' || pathname === '/') {
+    // For public pages, we'll let the client-side handle token verification
+    console.log('📂 Public page accessed:', pathname);
+    return NextResponse.next();
+  }
+
+  // Protected routes
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api') || pathname.startsWith('/map')) {
+    console.log('🔒 Protected route accessed:', pathname);
+    
+    if (!token) {
+      console.log('❌ No token found for protected route');
+      if (pathname.startsWith('/api')) {
+        return NextResponse.json({ error: 'No token provided' }, { status: 401 });
+      }
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // For protected routes, we have a token but can't verify it here in Edge runtime
+    // The actual verification will happen in the API routes or client-side
+    console.log('🎫 Token found for protected route, verification will happen server-side');
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (NextAuth API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)',
+    '/dashboard/:path*',
+    '/api/:path*',
+    '/login',
+    '/',
+    '/map'
   ]
-}
+};
